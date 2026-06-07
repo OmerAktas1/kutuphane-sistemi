@@ -1,0 +1,41 @@
+{
+  "name": "kutuphane",
+  "version": "1.0.0",
+  "description": "Kutuphane Takip Sistemi",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "author": "Kutuphane",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.kutuphane.app",
+    "productName": "KutuphaneTakip",
+    "asar": false,
+    "directories": {
+      "output": "output"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "../frontend/dist/**/*",
+      "../backend/dist/**/*",
+      "../backend/prisma/schema.prisma",
+      "../backend/.env",
+      "../backend/node_modules/.prisma/**/*",
+      "../backend/node_modules/@prisma/**/*"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "KutuphaneTakipSetup.exe"
+    }
+  }
+}

@@ -1,0 +1,110 @@
+// Kutuphane Takip Sistemi - Veritabani Sema
+// Prisma ORM ile SQLite icin tanimlar
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Kitap modeli
+model Book {
+  id        Int        @id @default(autoincrement())
+  title     String     @map("title")
+  location  String?    @map("location")
+  status    String    @default("AVAILABLE") @map("status")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  borrowings Borrowing[]
+
+  @@map("books")
+}
+
+// Uye modeli
+model Member {
+  id           Int       @id @default(autoincrement())
+  memberNo     String    @unique @map("member_no")
+  firstName    String    @map("first_name")
+  lastName     String    @map("last_name")
+  email        String    @unique
+  password     String
+  phone        String?
+  address      String?
+  city         String?
+  country      String?
+  birthDate    DateTime? @map("birth_date")
+  membershipDate DateTime @default(now()) @map("membership_date")
+  membershipExpiry DateTime? @map("membership_expiry")
+  status       String    @default("ACTIVE") @map("status")
+  maxBorrowLimit Int     @default(5) @map("max_borrow_limit")
+  photoUrl     String?   @map("photo_url")
+  notes        String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("members")
+}
+
+// Odunc alma modeli
+model Borrowing {
+  id              Int       @id @default(autoincrement())
+  studentId       Int       @map("student_id")
+  bookId          Int       @map("book_id")
+  borrowDate      DateTime  @default(now()) @map("borrow_date")
+  dueDate         DateTime  @map("due_date")
+  returnDate      DateTime? @map("return_date")
+  status          String    @default("BORROWED") @map("status")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  student        Student   @relation(fields: [studentId], references: [id])
+  book           Book      @relation(fields: [bookId], references: [id])
+
+  @@map("borrowings")
+}
+
+// Sistem ayarlari modeli
+model SystemSetting {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       String
+  group       String?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+// Sinif modeli
+model Class {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @map("name")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  students Student[]
+
+  @@map("classes")
+}
+
+// Ogrenci modeli
+model Student {
+  id            Int      @id @default(autoincrement())
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  studentNumber String   @unique @map("student_number")
+  classId       Int      @map("class_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  class      Class      @relation(fields: [classId], references: [id])
+  borrowings Borrowing[]
+
+  @@map("students")
+}
