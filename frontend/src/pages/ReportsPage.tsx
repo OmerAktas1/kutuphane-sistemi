@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dashboardService } from '@/services/dashboardService';
-import { borrowingService } from '@/services/borrowingService';
-import { bookService } from '@/services/bookService';
-import { studentService } from '@/services/studentService';
 import {
   BookOpen, Users, GraduationCap, AlertTriangle, RefreshCw,
-  Download, Printer, FileText, Calendar, Filter, TrendingUp,
-  Clock, CheckCircle, XCircle
+  Printer, FileText, Calendar, TrendingUp,
+  Clock, CheckCircle
 } from 'lucide-react';
+import BackButton from '@/components/BackButton';
 import type { DashboardStats, MonthlyStats, ClassStats } from '@/types';
 
 export default function ReportsPage() {
@@ -62,6 +60,7 @@ export default function ReportsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
+              <BackButton />
               <div className="flex items-center justify-center w-9 h-9 bg-purple-600 rounded-lg">
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
@@ -75,13 +74,6 @@ export default function ReportsPage() {
               >
                 <Printer className="w-4 h-4" />
                 Yazdır
-              </button>
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Geri
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { Pencil, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { Pencil, Trash2, Loader2, AlertTriangle, BookOpen } from 'lucide-react';
 import type { Student } from '@/types';
 
 interface StudentTableProps {
@@ -6,9 +6,10 @@ interface StudentTableProps {
   isLoading: boolean;
   onEdit: (student: Student) => void;
   onDelete: (student: Student) => void;
+  onGiveBook?: (student: Student) => void;
 }
 
-export default function StudentTable({ students, isLoading, onEdit, onDelete }: StudentTableProps) {
+export default function StudentTable({ students, isLoading, onEdit, onDelete, onGiveBook }: StudentTableProps) {
   if (isLoading && students.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -90,6 +91,15 @@ export default function StudentTable({ students, isLoading, onEdit, onDelete }: 
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center justify-end gap-2">
+                  {onGiveBook && (
+                    <button
+                      onClick={() => onGiveBook(student)}
+                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      title="Kitap Ver"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => onEdit(student)}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

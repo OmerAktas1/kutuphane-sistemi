@@ -2,13 +2,11 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import swaggerUi from 'swagger-ui-express';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { config } from './index';
 import { logger } from '../utils/logger';
 import { ApiError } from '../types/ApiError';
-import swaggerSpec from './swagger';
 import routes from '../routes';
 
 export function createApp(): Express {
@@ -47,15 +45,11 @@ export function createApp(): Express {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // API Documentation
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
   // API Routes - MUST be before static files
   app.use('/api/v1', routes);
 
   // Serve static frontend files
   const frontendPath = path.join(process.cwd(), '..', 'frontend', 'dist');
-  console.log('[Static] Serving frontend from:', frontendPath);
   app.use(express.static(frontendPath));
 
   // Serve frontend for all other routes (SPA support)

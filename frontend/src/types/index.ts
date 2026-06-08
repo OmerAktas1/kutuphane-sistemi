@@ -224,3 +224,71 @@ export interface ClassStats {
   studentCount: number;
   borrowCount: number;
 }
+
+// ============================================================================
+// Kitap Alma (Ödünç Verme) Sistemi için Tür Tanımlamaları
+// ============================================================================
+
+/**
+ * Öğrenci seçim listesi için basitleştirilmiş öğrenci tipi
+ */
+export interface StudentOption {
+  id: number;
+  firstName: string;
+  lastName: string;
+  studentNumber: string;
+  class?: {
+    id: number;
+    name: string;
+  };
+}
+
+/**
+ * Kitap seçim listesi için basitleştirilmiş kitap tipi
+ */
+export interface BookOption {
+  id: number;
+  title: string;
+  location: string | null;
+}
+
+/**
+ * Ödünç alma işlemi için kullanılan form verisi
+ */
+export interface BorrowFormData {
+  studentId: number;
+  bookId: number;
+  borrowDate: Date;
+  dueDate: Date;
+  notes?: string;
+}
+
+/**
+ * Ödünç verme sonucu döndürülen işlem kaydı
+ * Backend'den dönen Borrowing tipi ile uyumlu
+ */
+export interface BorrowTransaction extends Omit<Borrowing, 'borrowDate' | 'dueDate' | 'returnDate'> {
+  borrowDate: string;
+  dueDate: string;
+  returnDate?: string;
+}
+
+/**
+ * Ödünç verme formu validasyon hataları
+ */
+export interface BorrowFormErrors {
+  studentId?: string;
+  bookId?: string;
+  borrowDate?: string;
+  dueDate?: string;
+  notes?: string;
+}
+
+/**
+ * Tarih bilgisi için yardımcı tip
+ */
+export interface DateInfo {
+  date: Date;
+  formatted: string; // ISO format: YYYY-MM-DD
+  display: string;   // Türkçe görüntü formatı: DD.MM.YYYY
+}

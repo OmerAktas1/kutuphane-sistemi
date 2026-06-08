@@ -44,4 +44,6 @@ docker/postgres/
 
 electron/output/
 win-unpacked/
+dist/
+node_modules/
 *.exe

@@ -4,7 +4,8 @@ import { useBorrowingStore } from '@/hooks/useBorrowingStore';
 import { SearchBar, Pagination } from '@/components/Class';
 import { BorrowModal, BorrowingTable, ReturnModal } from '@/components/Borrowing';
 import { borrowingService } from '@/services/borrowingService';
-import type { Borrowing, BorrowStatus } from '@/types';
+import BackButton from '@/components/BackButton';
+import type { Borrowing, BorrowStatus, StudentOption, BookOption } from '@/types';
 
 type TabType = 'active' | 'history';
 
@@ -28,8 +29,8 @@ export default function BorrowingPage() {
   const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [selectedBorrowing, setSelectedBorrowing] = useState<Borrowing | null>(null);
-  const [students, setStudents] = useState<{ id: number; firstName: string; lastName: string; studentNumber: string; class?: { id: number; name: string } }[]>([]);
-  const [availableBooks, setAvailableBooks] = useState<{ id: number; title: string; location: string | null }[]>([]);
+  const [students, setStudents] = useState<StudentOption[]>([]);
+  const [availableBooks, setAvailableBooks] = useState<BookOption[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
   useEffect(() => {
@@ -97,6 +98,7 @@ export default function BorrowingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
+              <BackButton />
               <div className="flex items-center justify-center w-9 h-9 bg-primary-600 rounded-lg">
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
@@ -105,11 +107,20 @@ export default function BorrowingPage() {
 
             <button
               onClick={openBorrowModal}
-              disabled={isLoadingData || availableBooks.length === 0}
+              disabled={isLoadingData}
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors shadow-sm disabled:opacity-50"
             >
-              <Plus className="w-4 h-4" />
-              Kitap Ver
+              {isLoadingData ? (
+                <>
+                  <RotateCcw className="w-4 h-4 animate-spin" />
+                  Yükleniyor...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Kitap Ver
+                </>
+              )}
             </button>
           </div>
         </div>

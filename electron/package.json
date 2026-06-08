@@ -24,18 +24,36 @@
     "files": [
       "main.js",
       "preload.js",
-      "../frontend/dist/**/*",
-      "../backend/dist/**/*",
-      "../backend/prisma/schema.prisma",
-      "../backend/.env",
-      "../backend/node_modules/.prisma/**/*",
-      "../backend/node_modules/@prisma/**/*"
+      {
+        "from": "../frontend/dist",
+        "to": "frontend/dist",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../backend/dist",
+        "to": "backend/dist",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../backend/prisma",
+        "to": "backend/prisma",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../backend/.env",
+        "to": "backend/.env"
+      },
+      {
+        "from": "../backend/node_modules",
+        "to": "backend/node_modules",
+        "filter": ["**/*"]
+      }
     ],
     "win": {
-      "target": "portable"
+      "target": "dir"
     },
-    "portable": {
-      "artifactName": "KutuphaneTakipSetup.exe"
+    "extraMetadata": {
+      "main": "main.js"
     }
   }
 }

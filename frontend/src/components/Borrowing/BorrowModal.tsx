@@ -1,26 +1,14 @@
-import { useState, useEffect } from 'react';
-import { X, Plus, Loader2, ChevronDown } from 'lucide-react';
-
-interface Student {
-  id: number;
-  firstName: string;
-  lastName: string;
-  studentNumber: string;
-  class?: { id: number; name: string };
-}
-
-interface Book {
-  id: number;
-  title: string;
-  location: string | null;
-}
+import { useState, useEffect, useCallback } from 'react';
+import { X, Plus, Loader2, Search, BookOpen } from 'lucide-react';
+import type { StudentOption, BookOption, BorrowFormErrors } from '@/types';
+import { getDefaultBorrowDates, formatDateToISO, parseISODate, calculateDueDate } from '@/utils/dateUtils';
 
 interface BorrowModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: { studentId: number; bookId: number; borrowDate: string; dueDate: string; notes?: string }) => Promise<void>;
-  students: Student[];
-  books: Book[];
+  students: StudentOption[];
+  books: BookOption[];
   isLoading?: boolean;
 }
 
@@ -30,27 +18,56 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
   const [borrowDate, setBorrowDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<BorrowFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [bookSearch, setBookSearch] = useState('');
+
+  /** Modal açıldığında formu sıfırla ve tarihleri otomatik hesapla */
+  const resetForm = useCallback(() => {
+    const defaults = getDefaultBorrowDates();
+    setBorrowDate(defaults.borrowDate.formatted);
+    setDueDate(defaults.dueDate.formatted);
+    setStudentId('');
+    setBookId('');
+    setNotes('');
+    setErrors({});
+    setStudentSearch('');
+    setBookSearch('');
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
-      // Set default dates
-      const today = new Date();
-      const due = new Date(today);
-      due.setDate(due.getDate() + 15);
-
-      setBorrowDate(today.toISOString().split('T')[0]);
-      setDueDate(due.toISOString().split('T')[0]);
-      setStudentId('');
-      setBookId('');
-      setNotes('');
-      setErrors({});
+      resetForm();
     }
-  }, [isOpen]);
+  }, [isOpen, resetForm]);
+
+  /** Verilme tarihi değiştiğinde iade tarihini otomatik olarak 15 gün sonrasına güncelle */
+  const handleBorrowDateChange = useCallback((newBorrowDate: string) => {
+    setBorrowDate(newBorrowDate);
+    if (errors.borrowDate) {
+      setErrors((prev) => ({ ...prev, borrowDate: undefined }));
+    }
+    // İade tarihini otomatik olarak 15 gün sonrasına hesapla
+    if (newBorrowDate) {
+      const parsedDate = parseISODate(newBorrowDate);
+      const calculatedDue = calculateDueDate(parsedDate);
+      setDueDate(formatDateToISO(calculatedDue));
+    }
+  }, [errors.borrowDate]);
+
+  // Filtrelenmiş listeler
+  const filteredStudents = students.filter(s =>
+    `${s.firstName} ${s.lastName} ${s.studentNumber}`.toLowerCase().includes(studentSearch.toLowerCase())
+  );
+
+  const filteredBooks = books.filter(b =>
+    b.title.toLowerCase().includes(bookSearch.toLowerCase()) ||
+    (b.location && b.location.toLowerCase().includes(bookSearch.toLowerCase()))
+  );
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: BorrowFormErrors = {};
 
     if (!studentId) {
       newErrors.studentId = 'Öğrenci seçimi gerekli';
@@ -66,7 +83,7 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
 
     if (!dueDate) {
       newErrors.dueDate = 'Son teslim tarihi gerekli';
-    } else if (new Date(dueDate) <= new Date(borrowDate)) {
+    } else if (borrowDate && new Date(dueDate) <= new Date(borrowDate)) {
       newErrors.dueDate = 'Son teslim tarihi alış tarihinden sonra olmalı';
     }
 
@@ -74,6 +91,9 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
     return Object.keys(newErrors).length === 0;
   };
 
+  /**
+   * Form verilerini toplayıp BorrowTransaction formatında işleyen fonksiyon
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -87,6 +107,7 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
         dueDate,
         notes: notes.trim() || undefined,
       });
+      resetForm();
       onClose();
     } catch {
       // Error handled by parent
@@ -94,6 +115,9 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
       setIsSubmitting(false);
     }
   };
+
+  const selectedStudent = students.find(s => s.id === studentId);
+  const selectedBook = books.find(b => b.id === bookId);
 
   if (!isOpen) return null;
 
@@ -103,8 +127,14 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
 
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative w-full max-w-lg transform rounded-xl bg-white shadow-xl transition-all">
+          {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-            <h3 className="text-lg font-semibold text-gray-900">Kitap Ödünç Ver</h3>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <BookOpen className="h-5 w-5 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Kitap Ödünç Ver</h3>
+            </div>
             <button
               onClick={onClose}
               className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
@@ -115,87 +145,130 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
 
           <form onSubmit={handleSubmit} className="p-6">
             <div className="space-y-4">
-              {/* Student Selection */}
+              {/* Öğrenci Seçimi */}
               <div>
-                <label htmlFor="studentId" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Öğrenci <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Öğrenci Seç <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <select
-                    id="studentId"
-                    value={studentId}
-                    onChange={(e) => {
-                      setStudentId(e.target.value ? Number(e.target.value) : '');
-                      if (errors.studentId) setErrors((prev) => ({ ...prev, studentId: '' }));
-                    }}
-                    className={`block w-full rounded-lg border px-3 py-2.5 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none ${
-                      errors.studentId ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-gray-400'
-                    } ${!studentId ? 'text-gray-400' : ''}`}
-                    disabled={isSubmitting}
-                  >
-                    <option value="">Öğrenci seçin</option>
-                    {students.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.firstName} {s.lastName} ({s.studentNumber}) - {s.class?.name || '-'}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+
+                {/* Arama */}
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    placeholder="Öğrenci ara..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                {/* Öğrenci Listesi */}
+                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                    </div>
+                  ) : filteredStudents.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500 text-sm">
+                      Öğrenci bulunamadı
+                    </div>
+                  ) : (
+                    filteredStudents.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setStudentId(s.id);
+                          if (errors.studentId) setErrors((prev) => ({ ...prev, studentId: undefined }));
+                        }}
+                        className={`w-full text-left px-4 py-3 hover:bg-green-50 transition-colors border-b border-gray-100 last:border-b-0 ${
+                          studentId === s.id ? 'bg-green-50 border-l-4 border-l-green-500' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold text-primary-700">
+                              {s.firstName.charAt(0)}{s.lastName.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{s.firstName} {s.lastName}</p>
+                            <p className="text-xs text-gray-500">{s.studentNumber} - {s.class?.name || '-'}</p>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
                 {errors.studentId && <p className="mt-1 text-sm text-red-600">{errors.studentId}</p>}
               </div>
 
-              {/* Book Selection */}
+              {/* Kitap Seçimi */}
               <div>
-                <label htmlFor="bookId" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Kitap <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Kitap Seç <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <select
-                    id="bookId"
-                    value={bookId}
-                    onChange={(e) => {
-                      setBookId(e.target.value ? Number(e.target.value) : '');
-                      if (errors.bookId) setErrors((prev) => ({ ...prev, bookId: '' }));
-                    }}
-                    className={`block w-full rounded-lg border px-3 py-2.5 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none ${
-                      errors.bookId ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-gray-400'
-                    } ${!bookId ? 'text-gray-400' : ''}`}
-                    disabled={isSubmitting}
-                  >
-                    <option value="">Kitap seçin</option>
-                    {books.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.title} {b.location ? `(${b.location})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+
+                {/* Arama */}
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={bookSearch}
+                    onChange={(e) => setBookSearch(e.target.value)}
+                    placeholder="Kitap ara..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
                 </div>
-                {books.length === 0 && (
-                  <p className="mt-1 text-sm text-amber-600">
-                    Müsait kitap yok. Tüm kitaplar ödünç verilmiş olabilir.
-                  </p>
-                )}
+
+                {/* Kitap Listesi */}
+                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                    </div>
+                  ) : filteredBooks.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500 text-sm">
+                      {bookSearch ? 'Kitap bulunamadı' : 'Müsait kitap yok'}
+                    </div>
+                  ) : (
+                    filteredBooks.map((b) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => {
+                          setBookId(b.id);
+                          if (errors.bookId) setErrors((prev) => ({ ...prev, bookId: undefined }));
+                        }}
+                        className={`w-full text-left px-4 py-3 hover:bg-green-50 transition-colors border-b border-gray-100 last:border-b-0 ${
+                          bookId === b.id ? 'bg-green-50 border-l-4 border-l-green-500' : ''
+                        }`}
+                      >
+                        <p className="font-medium text-gray-900">{b.title}</p>
+                        {b.location && (
+                          <p className="text-xs text-gray-500">Raf: {b.location}</p>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
                 {errors.bookId && <p className="mt-1 text-sm text-red-600">{errors.bookId}</p>}
               </div>
 
-              {/* Dates */}
+              {/* Tarihler */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="borrowDate" className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Alış Tarihi <span className="text-red-500">*</span>
+                    Verilme Tarihi <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
                     id="borrowDate"
                     value={borrowDate}
-                    onChange={(e) => {
-                      setBorrowDate(e.target.value);
-                      if (errors.borrowDate) setErrors((prev) => ({ ...prev, borrowDate: '' }));
-                    }}
-                    className={`block w-full rounded-lg border px-3 py-2.5 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                      errors.borrowDate ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-gray-400'
+                    onChange={(e) => handleBorrowDateChange(e.target.value)}
+                    className={`block w-full rounded-lg border px-3 py-2.5 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                      errors.borrowDate ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
                     disabled={isSubmitting}
                   />
@@ -204,7 +277,7 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
 
                 <div>
                   <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Son Teslim Tarihi <span className="text-red-500">*</span>
+                    İade Tarihi <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -212,18 +285,19 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
                     value={dueDate}
                     onChange={(e) => {
                       setDueDate(e.target.value);
-                      if (errors.dueDate) setErrors((prev) => ({ ...prev, dueDate: '' }));
+                      if (errors.dueDate) setErrors((prev) => ({ ...prev, dueDate: undefined }));
                     }}
-                    className={`block w-full rounded-lg border px-3 py-2.5 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                      errors.dueDate ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-gray-400'
+                    className={`block w-full rounded-lg border px-3 py-2.5 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                      errors.dueDate ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
                     disabled={isSubmitting}
                   />
                   {errors.dueDate && <p className="mt-1 text-sm text-red-600">{errors.dueDate}</p>}
+                  <p className="mt-1 text-xs text-gray-400">Otomatik: Verilme + 15 gün</p>
                 </div>
               </div>
 
-              {/* Notes */}
+              {/* Not */}
               <div>
                 <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Not
@@ -234,12 +308,30 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Opsiyonel not..."
                   rows={2}
-                  className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent hover:border-gray-400"
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   disabled={isSubmitting}
                 />
               </div>
             </div>
 
+            {/* Seçili Bilgiler */}
+            {(selectedStudent || selectedBook) && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-600 font-medium mb-2">Seçilenler:</p>
+                {selectedStudent && (
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium">Öğrenci:</span> {selectedStudent.firstName} {selectedStudent.lastName}
+                  </p>
+                )}
+                {selectedBook && (
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium">Kitap:</span> {selectedBook.title}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Butonlar */}
             <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 mt-6">
               <button
                 type="button"
@@ -247,12 +339,12 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
                 className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
                 disabled={isSubmitting}
               >
-                İptal
+                Vazgeç
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || books.length === 0}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 transition-colors disabled:opacity-50"
+                disabled={isSubmitting || books.length === 0 || students.length === 0}
+                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 transition-colors disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>
@@ -262,7 +354,7 @@ export default function BorrowModal({ isOpen, onClose, onSubmit, students, books
                 ) : (
                   <>
                     <Plus className="h-4 w-4" />
-                    Ödünç Ver
+                    İşlemi Tamamla
                   </>
                 )}
               </button>

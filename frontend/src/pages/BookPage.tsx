@@ -5,6 +5,7 @@ import { SearchBar } from '@/components/Class';
 import { DeleteConfirmModal } from '@/components/Class';
 import { BookModal, BookTable } from '@/components/Book';
 import { Pagination } from '@/components/Class';
+import BackButton from '@/components/BackButton';
 import type { Book, BookStatus } from '@/types';
 
 export default function BookPage() {
@@ -77,6 +78,7 @@ export default function BookPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
+              <BackButton />
               <div className="flex items-center justify-center w-9 h-9 bg-primary-600 rounded-lg">
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
